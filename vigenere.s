@@ -1,5 +1,5 @@
 section .data
-    out1        db "Enter your message: "
+    out1        db "Enter your message: "           ; wow i can read comments
     lenout1     equ $-out1
     out2        db "Enter your key: "
     lenout2     equ $-out2
