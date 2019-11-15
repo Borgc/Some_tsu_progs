@@ -32,19 +32,24 @@ global _start
         jne wrong 
 
         mov ebp, esp
-        mov ebx, [ebp + 8]          ; get a address
+        push dword [ebp + 8]          ; get a address
         call string_len
         mov [len_a], eax            ; get a length
-        mov eax, [ebx]             
+        mov eax, [ebx]      
+        add esp, 4      
         
 
-        mov esi, [ebp + 8]          ; in esi a in stack address     
+        mov esi, [ebp + 8]          ; in esi a in stack address
+        push dword esi     
         call string_to_int
-        mov [a], eax               ; move number in [a] from eax ¯ \ _ (ツ) _ / ¯
+        mov [a], eax                ; move number in [a] from eax ¯ \ _ (ツ) _ / ¯
+        add esp, 4
        
-        mov esi, [ebp + 12]                                         
+        mov esi, [ebp + 12]
+        push dword esi                                         
         call string_to_int
-        mov [b], eax                
+        mov [b], eax   
+        add esp, 4             
 
         mov eax, [a]
         mov ebx, [b]                ; a lot of jumps
@@ -110,9 +115,10 @@ global _start
         je minus
 
         norm:
-        mov edi, c
-        mov ebp, 12
+        push dword 12
+        push dword c
         call print
+        add esp, 8
 
         end:
         mov eax, 1              ; just end this program
@@ -193,9 +199,16 @@ global _start
         jmp end
 
         string_to_int:
+            .shift equ 8
+
+            push ebp
+            mov ebp, esp
+
             xor eax, eax
             mov ecx, 10
             xor ebx, ebx
+
+            mov esi, [ebp + .shift]
             mov bl, [esi]
             cmp bl, '-'
             je .skip
@@ -215,41 +228,60 @@ global _start
             inc esi
             jmp .back
             .exit:
+            pop ebp
         ret
 
         wrong:
-            mov edi, errout
-            mov ebp, lenerr
+            push dword lenerr
+            push dword errout
             call print
+            add esp, 8
         jmp end
 
-        print:
-            mov eax, 4
-            mov ebx, 1
-            mov ecx, edi        ;edi - your message
-            mov edx, ebp        ;ebp - length
-            int 80h
+        print:                  ;print(msg_adr, length)
+        .length     equ 12
+        .msg_adr    equ 8
 
-            mov eax, 4
-            mov ebx, 1
-            mov ecx, empty
-            mov edx, 1
+        push ebp
+        mov ebp, esp
+
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, [ebp + .msg_adr]        ;edi - your message
+        mov edx, [ebp + .length]         ;edx - length
+        int 80h
+
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, empty
+        mov edx, 1
+        int 80h  
             int 80h   
-        ret
+        int 80h  
+        pop ebp 
+    ret
 
-        string_len:
+        string_len:                 ; string_len()
+        .shift equ 8
+
+        push ebp
+        mov ebp, esp
+
         xor eax, eax 
-        again:   
+        mov ebx, [ebp + .shift]
+        .again:   
             inc eax             
-            mov cl, [ebx]       ; in ebx address from stack address
+            mov cl, [ebx] 
             inc ebx
             test cl, cl
-            jnz again
-        dec eax                 
-        ret
+            jnz .again
+        dec eax     
+        pop ebp            
+    ret
 
         overflow:
-            mov edi, overf
-            mov ebp, lenoverf
+            push dword lenoverf
+            push dword overf
             call print
+            add esp, 8
             jmp end

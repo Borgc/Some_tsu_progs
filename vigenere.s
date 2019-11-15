@@ -22,11 +22,10 @@ global _start
     cmp ebx, 2
     jne wrong
 
-    push ebp
-    mov edi, out1
-    mov ebp, lenout1
+    push dword lenout1
+    push dword out1
     call print
-    pop ebp
+    add esp, 8
 
     mov eax, 3
     mov ebx, 0
@@ -35,11 +34,13 @@ global _start
     int 80h
 
     mov [len1], eax
-
-    
-    mov ebx, [ebp+8]
+    mov ebx, [ebp + 8]
     mov [key], ebx
+
+    ; string_len(msg_adr) 
+    push ebx
     call string_len
+    add esp, 4
 
     ; substr(msg, msg_len, key, key_len)
     push dword eax
@@ -49,9 +50,10 @@ global _start
     call _substr
     add esp, 16
     
-    mov edi, msg
-    mov ebp, [len1]
+    push dword [len1]
+    push dword msg
     call print
+    add esp, 8
 
     end:
         mov eax, 1
@@ -61,7 +63,10 @@ global _start
     wrong:
         mov edi, errout
         mov ebp, lenerr
+        push dword lenerr
+        push dword errout
         call print
+        add esp, 8
         jmp end
 
     _substr:                            ; substr(msg, msg_len, key, key_len)
@@ -97,7 +102,7 @@ global _start
             jg .skip
 
             add bl, dl                      ; складываем коды
-            movzx ax, bl                      ; пихаем сумму в ах чтобы разделить с остатком на 26
+            movzx ax, bl                    ; пихаем сумму в ах чтобы разделить с остатком на 26
             mov bh, 26                      ; 26
             div bh                          ; division
             
@@ -110,29 +115,42 @@ global _start
     ret
 
 
-    print:
+    print:                  ;print(msg_adr, length)
+        .length     equ 12
+        .msg_adr    equ 8
+
+        push ebp
+        mov ebp, esp
+
         mov eax, 4
         mov ebx, 1
-        mov ecx, edi        ;edi - your message
-        mov edx, ebp        ;edx - length
+        mov ecx, [ebp + .msg_adr]        ;edi - your message
+        mov edx, [ebp + .length]         ;edx - length
         int 80h
 
         mov eax, 4
         mov ebx, 1
         mov ecx, empty
         mov edx, 1
-        int 80h   
+        int 80h  
+        pop ebp 
     ret
 
-    string_len:
+    string_len:                 ; string_len(ebp)
+        .shift equ 8
+
+        push ebp
+        mov ebp, esp
         xor eax, eax 
-        again:   
-            inc eax             ; need to zero ecx
-            mov cl, [ebx]       ; in ebx address from stack address
+        mov ebx, [ebp + .shift]
+        .again:   
+            inc eax             
+            mov cl, [ebx] 
             inc ebx
             test cl, cl
-            jnz again
-        dec eax                 
+            jnz .again
+        dec eax     
+        pop ebp            
     ret
 
 
