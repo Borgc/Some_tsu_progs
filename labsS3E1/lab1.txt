@@ -1,0 +1,114 @@
+SECTION .data
+a dq 0
+
+empty db 0x0A
+len_empty equ $-empty
+
+errout db "wrong input"
+lenerr equ $-errout
+
+SECTION .bss
+    num   resb 6
+    len_a resb 32
+SECTION .text
+global _start
+    _start:
+
+        mov eax, 3
+        mov ebx, 1
+        mov ecx, num        ;get number N
+        mov edx, 5
+        int 80h
+
+        push dword ecx
+        call string_to_int
+        add esp, 4
+
+        xor edx, edx        ; zero edx cause its has no matter
+        mov ebx, 60         ; divisor
+        div ebx             ; division
+
+        xor ecx, ecx        ; zero ecx
+        division_int:
+            xor edx, edx    ; zero edx
+            mov ebx, 10     ; ebx divisor
+            div ebx         ; division
+            add edx, '0'    ; zero symbol
+            push edx        ; push symbol
+            inc ecx         ; inc ecx for next symbol
+            test eax, eax   ; is zero or not test
+        jne division_int
+
+        mov esi, a          ; get a number address
+        popper:
+            pop edx         ; pop single character number
+            mov [esi], edx  
+            inc esi         ; inc for next symbol
+            loop popper
+        push dword 4        ; a max possiblle length is 3
+        push dword a        
+        call print
+        add esp, 8          ; we pushed 2 dwords 
+
+    end:
+        mov eax, 1          ; just end this program
+        mov ebx, 0
+        int 80h
+    
+    string_to_int:
+        .shift equ 8        ; stackframe
+
+        push ebp            
+        mov ebp, esp        
+        xor eax, eax        ; zero eax
+        mov ecx, 10         ; multiplier
+        xor ebx, ebx        ; zero ebx
+        mov esi, [esp + .shift] ; get char
+        mov bl, [esi]       
+        cmp bl, '-'         ; chek there is non-negative number
+        je .skip         
+        .back
+        mov bl, [esi]
+        test bl, bl
+        jz .exit
+        cmp bl, 0xa
+        je .skip
+        cmp bl, 0x30        ; compare our number between 0 and 9
+        jl wrong
+        cmp bl, 0x39
+        jg wrong
+        sub bl, '0'
+        mul ecx
+        jo wrong
+        add eax, ebx
+        .skip: 
+        inc esi
+        jmp .back
+        .exit
+        pop ebp
+    ret
+
+    wrong:
+        push dword lenerr
+        push dword errout
+        call print
+        add esp, 8
+    jmp end
+    print: 
+        .length equ 12
+        .msg_adr equ 8
+
+        push ebp
+        mov ebp, esp
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, [ebp + .msg_adr]
+        mov edx, [ebp +.length]
+        int 80h
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, empty
+        mov edx, len_empty
+        int 80h
+        pop ebp
+    ret

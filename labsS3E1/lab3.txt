@@ -1,0 +1,118 @@
+SECTION .data
+a dq 0
+
+empty db 0x0A
+len_empty equ $-empty
+
+trueout db "Power of 2"
+lentrue equ $-trueout
+
+falseout db "Not power of 2"
+len_false equ $-falseout
+
+errout db "wrong input"
+lenerr equ $-errout
+
+SECTION .bss
+    num   resb 6
+    len_a resb 32
+SECTION .text
+global _start
+    _start:
+
+        mov eax, 3
+        mov ebx, 1
+        mov ecx, num        ;get number N
+        mov edx, 5
+        int 80h
+
+        push dword ecx
+        call string_to_int
+        add esp, 4
+        xor edx, edx        ;zero edx
+    check_zero:
+        mov ebx, eax        ;mov it to save
+        and ebx, 0x01       ;make bitwise AND with 0x01 we chaeck first bit is 1 or 0
+        add edx, ebx        ;counting how much 1 we have in number 
+        shr eax, 0x1        ;shift number for next bit
+        test eax, eax       ;when eax is 0 we have nothing to do
+        jz exit             
+        jmp check_zero      ;if eax is non zero then we have non zero bits in our number
+
+    exit:
+    cmp edx, 1              ;in binary system power of 2 is a number with only one "1"
+    je print_true           
+    push dword len_false
+    push dword falseout
+    call print
+    add esp, 8
+    jmp end
+
+    print_true:
+    push dword lentrue
+    push dword trueout
+    call print
+    add esp, 8
+
+    end:
+        mov eax, 1          ; just end this program
+        mov ebx, 0
+        int 80h
+    
+    string_to_int:
+        .shift equ 8        ; stackframe
+
+        push ebp            
+        mov ebp, esp        
+        xor eax, eax        ; zero eax
+        mov ecx, 10         ; multiplier
+        xor ebx, ebx        ; zero ebx
+        mov esi, [esp + .shift] ; get char
+        mov bl, [esi]       
+        cmp bl, '-'         ; chek there is non-negative number
+        je .skip         
+        .back
+        mov bl, [esi]
+        test bl, bl
+        jz .exit
+        cmp bl, 0xa
+        je .skip
+        cmp bl, 0x30        ; compare our number between 0 and 9
+        jl wrong
+        cmp bl, 0x39
+        jg wrong
+        sub bl, '0'
+        mul ecx
+        jo wrong
+        add eax, ebx
+        .skip: 
+        inc esi
+        jmp .back
+        .exit
+        pop ebp
+    ret
+
+    wrong:
+        push dword lenerr
+        push dword errout
+        call print
+        add esp, 8
+    jmp end
+    print: 
+        .length equ 12
+        .msg_adr equ 8
+
+        push ebp
+        mov ebp, esp
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, [ebp + .msg_adr]
+        mov edx, [ebp +.length]
+        int 80h
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, empty
+        mov edx, len_empty
+        int 80h
+        pop ebp
+    ret

@@ -1,0 +1,109 @@
+SECTION .data
+
+msg_true    db "Sums are equal"
+len_true    equ $ - msg_true
+
+msg_false   db "Sums are not equal"
+len_false   equ $ - msg_false
+
+empty       db 0x0A
+len_empty   equ $-empty
+
+errout      db "wrong input, usage: <num> 4 characters length"
+lenerr      equ $-errout
+
+SECTION .bss
+    num   resb 5
+SECTION .text
+global _start
+    _start:
+
+        mov eax, 3
+        mov ebx, 1
+        mov ecx, num        ;get num
+        mov edx, 5
+        int 80h
+
+        push dword ecx
+        call is_sums_equal
+        add esp, 4
+    end:
+        mov eax, 1          ; just end this program
+        mov ebx, 0
+        int 80h
+    
+    is_sums_equal:
+        .shift equ 8        ; stackframe
+
+        push ebp            
+        mov ebp, esp    
+
+        mov esi, [esp + .shift] ; get char
+        mov bl, [esi    ]       ; mov our character in resister
+        cmp bl, '0'             ; check input data
+        jl wrong
+        cmp bl, '9'
+        jg wrong
+        mov bh, [esi + 1]
+        cmp bh, '0'
+        jl wrong
+        cmp bh, '9'
+        jg wrong
+        mov cl, [esi + 2]
+        cmp cl, '0'
+        jl wrong
+        cmp cl, '9'
+        jg wrong
+        mov ch, [esi + 3]
+        cmp ch, '0'
+        jl wrong
+        cmp ch, '9'
+        jg wrong
+
+        sub bl, '0'             ; get number from code
+        sub bh, '0'
+        sub cl, '0'
+        sub ch, '0'
+
+        add bl, bh              ; sum numbers
+        add cl, ch
+        cmp bl, cl
+        jne .non_equal
+            push len_true       ; output true or not
+            push msg_true
+            call print
+            add esp, 8
+            jmp .exit
+        .non_equal
+            push len_false
+            push msg_false
+            call print
+            add esp, 8
+        .exit
+        pop ebp
+    ret
+
+    wrong:
+        push dword lenerr
+        push dword errout
+        call print
+        add esp, 8
+    jmp end
+    print: 
+        .length equ 12
+        .msg_adr equ 8
+
+        push ebp
+        mov ebp, esp
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, [ebp + .msg_adr]
+        mov edx, [ebp +.length]
+        int 80h
+        mov eax, 4
+        mov ebx, 1
+        mov ecx, empty
+        mov edx, len_empty
+        int 80h
+        pop ebp
+    ret
